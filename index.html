@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マスコットガチャ</title>
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --bg-color: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* ガチャ表示エリア */
+    .result-container {
+      background: var(--card-bg);
+      border: 2px solid var(--primary-color);
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .result-title {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .result-name {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* アクションボタン */
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .btn-draw {
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 14px 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: transform 0.1s, background-color 0.2s;
+      box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3);
+    }
+
+    .btn-draw:hover {
+      background-color: #357abd;
+    }
+
+    .btn-draw:active {
+      transform: scale(0.97);
+    }
+
+    /* カテゴリー選択エリア */
+    .category-section {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .category-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .category-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+      user-select: none;
+    }
+
+    .category-card:hover {
+      background-color: #f0f7ff;
+    }
+
+    .category-card input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .category-card span {
+      font-weight: bold;
+    }
+
+    /* ガチャ履歴エリア */
+    .history-section {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+
+    .history-header h2 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+
+    .btn-clear {
+      background: none;
+      border: 1px solid var(--border-color);
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .btn-clear:hover {
+      background-color: #f0f0f0;
+    }
+
+    .history-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-index {
+      font-size: 0.85rem;
+      color: #888;
+      font-weight: bold;
+      margin-right: 12px;
+    }
+
+    .history-name {
+      font-weight: bold;
+      flex-grow: 1;
+    }
+
+    .empty-history {
+      color: #888;
+      text-align: center;
+      padding: 20px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>マスコットガチャ</h1>
+
+  <!-- 結果表示パーツ -->
+  <div class="result-container">
+    <div class="result-title">抽出されたキャラクター</div>
+    <div class="result-name" id="result">カテゴリーを選択してガチャを回してください</div>
+  </div>
+
+  <!-- ガチャ実行ボタン -->
+  <div class="controls">
+    <button class="btn-draw" onclick="drawGacha()">ガチャを回す！</button>
+  </div>
+
+  <!-- カテゴリー選択（チェックボックス） -->
+  <div class="category-section">
+    <h2>対象カテゴリーを選択</h2>
+    <div class="category-grid">
+      <label class="category-card">
+        <input type="checkbox" value="2023" checked>
+        <span>2023</span>
+      </label>
+      <label class="category-card">
+        <input type="checkbox" value="2024" checked>
+        <span>2024</span>
+      </label>
+      <label class="category-card">
+        <input type="checkbox" value="2025" checked>
+        <span>2025</span>
+      </label>
+      <label class="category-card">
+        <input type="checkbox" value="2026" checked>
+        <span>2026</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ガチャ履歴表示エリア -->
+  <div class="history-section">
+    <div class="history-header">
+      <h2>ガチャ履歴</h2>
+      <button class="btn-clear" onclick="clearHistory()">履歴をクリア</button>
+    </div>
+    <ol class="history-list" id="history-list">
+      <li class="empty-history" id="empty-msg">まだガチャを回していません</li>
+    </ol>
+  </div>
+
+  <script>
+    // キャラクターデータベース
+    const characterData = {
+      "2023": ["ミキ", "にころ", "いおり", "須磨都", "とこ", "みやっこ", "和猫", "寿昏"],
+      "2024": ["結田あずき", "ミタマ", "柴羽", "桜", "おはな", "かう", "にしき", "うゆう", "ロロ", "天ノ玲", "ほのり", "狐紺", "宇迦", "しから", "弥寿", "からす丸", "祭京しずき"],
+      "2025": ["九条清隆", "粗目霧利", "ミミ", "そよ", "ちゃちゃ", "玄幽", "虎狛", "千夏", "瀬織りつ", "恋鞠", "鞍祭天弧", "ララ", "焔離", "夜鳥廻狸", "漬子", "櫻井ニコ", "招", "うりん", "いつき", "七星おりこ"],
+      "2026": ["天乃星夏", "桃李", "宵宮玲", "リル", "星明", "メィティア", "古孤ともり", "祇園星明", "火宮星羅", "霊珠院日依", "八生", "つむる", "星詠夜乃", "くぐい"]
+    };
+
+    // ガチャの通算回数
+    let drawCount = 0;
+
+    function drawGacha() {
+      // チェックされているカテゴリーを取得
+      const checkedBoxes = document.querySelectorAll('.category-card input[type="checkbox"]:checked');
+      const selectedCategories = Array.from(checkedBoxes).map(cb => cb.value);
+
+      const resultElement = document.getElementById('result');
+
+      // ひとつも選択されていない場合
+      if (selectedCategories.length === 0) {
+        resultElement.innerText = "カテゴリーを選択してください";
+        return;
+      }
+
+      // 選択されたカテゴリーの中身をひとつの配列に統合
+      let candidatePool = [];
+      selectedCategories.forEach(cat => {
+        if (characterData[cat]) {
+          candidatePool = candidatePool.concat(characterData[cat]);
+        }
+      });
+
+      // ランダム抽出
+      const randomIndex = Math.floor(Math.random() * candidatePool.length);
+      const selectedCharacter = candidatePool[randomIndex];
+
+      // 結果画面に表示
+      resultElement.innerText = selectedCharacter;
+
+      // ログの追加処理
+      addHistory(selectedCharacter);
+    }
+
+    // 履歴を追加する関数
+    function addHistory(characterName) {
+      drawCount++;
+
+      const historyList = document.getElementById('history-list');
+      const emptyMsg = document.getElementById('empty-msg');
+
+      // 「まだガチャを回していません」のメッセージを削除
+      if (emptyMsg) {
+        emptyMsg.remove();
+      }
+
+      // 新しいリスト項目を作成
+      const li = document.createElement('li');
+      li.className = 'history-item';
+      li.innerHTML = `
+        <span class="history-index">#${drawCount}</span>
+        <span class="history-name">${characterName}</span>
+      `;
+
+      // 最新結果をリストの先頭に追加
+      historyList.prepend(li);
+    }
+
+    // 履歴をクリアする関数
+    function clearHistory() {
+      const historyList = document.getElementById('history-list');
+      historyList.innerHTML = '<li class="empty-history" id="empty-msg">まだガチャを回していません</li>';
+      drawCount = 0;
+    }
+  </script>
+
+</body>
+</html>
