@@ -81,8 +81,8 @@
       transform: scale(0.97);
     }
 
-    /* カテゴリー選択エリア */
-    .category-section {
+    /* 設定エリア */
+    .setting-section {
       background: var(--card-bg);
       border-radius: 12px;
       padding: 20px;
@@ -90,43 +90,93 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    .category-section h2 {
-      font-size: 1.1rem;
-      margin-bottom: 16px;
+    .setting-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 8px;
+      margin-bottom: 16px;
     }
 
-    .category-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 12px;
+    .setting-header h2 {
+      font-size: 1.1rem;
+      margin: 0;
     }
 
-    .category-card {
+    .btn-toggle-all {
+      background: none;
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    .btn-toggle-all:hover {
+      background-color: #f0f0f0;
+    }
+
+    /* 開閉（折りたたみ）アコーディオン スタイル */
+    .year-accordion {
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s, border-color 0.2s;
-      user-select: none;
+      margin-bottom: 12px;
+      overflow: hidden;
+      background-color: #fff;
     }
 
-    .category-card:hover {
+    .year-summary {
+      font-size: 1rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      background-color: #fcfcfc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.2s;
+    }
+
+    .year-summary:hover {
       background-color: #f0f7ff;
     }
 
-    .category-card input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
+    .year-accordion[open] .year-summary {
+      border-bottom: 1px solid var(--border-color);
+      background-color: #f4f8fe;
     }
 
-    .category-card span {
-      font-weight: bold;
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      padding: 16px;
+    }
+
+    .char-card {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      user-select: none;
+      background-color: #fafafa;
+      transition: background-color 0.2s;
+    }
+
+    .char-card:hover {
+      background-color: #eaf3ff;
+    }
+
+    .char-card input[type="checkbox"] {
+      cursor: pointer;
     }
 
     /* ガチャ履歴エリア */
@@ -211,7 +261,7 @@
   <!-- 結果表示パーツ -->
   <div class="result-container">
     <div class="result-title">抽出されたキャラクター</div>
-    <div class="result-name" id="result">カテゴリーを選択してガチャを回してください</div>
+    <div class="result-name" id="result">ガチャを回してください</div>
   </div>
 
   <!-- ガチャ実行ボタン -->
@@ -219,27 +269,16 @@
     <button class="btn-draw" onclick="drawGacha()">ガチャを回す！</button>
   </div>
 
-  <!-- カテゴリー選択（チェックボックス） -->
-  <div class="category-section">
-    <h2>対象カテゴリーを選択</h2>
-    <div class="category-grid">
-      <label class="category-card">
-        <input type="checkbox" value="2023" checked>
-        <span>2023</span>
-      </label>
-      <label class="category-card">
-        <input type="checkbox" value="2024" checked>
-        <span>2024</span>
-      </label>
-      <label class="category-card">
-        <input type="checkbox" value="2025" checked>
-        <span>2025</span>
-      </label>
-      <label class="category-card">
-        <input type="checkbox" value="2026" checked>
-        <span>2026</span>
-      </label>
+  <!-- キャラクター選択エリア -->
+  <div class="setting-section">
+    <div class="setting-header">
+      <h2>出現キャラクター設定</h2>
+      <div>
+        <button class="btn-toggle-all" onclick="setAllCheckboxes(true)">全選択</button>
+        <button class="btn-toggle-all" onclick="setAllCheckboxes(false)">全解除</button>
+      </div>
     </div>
+    <div id="character-settings"></div>
   </div>
 
   <!-- ガチャ履歴表示エリア -->
@@ -262,54 +301,88 @@
       "2026": ["天乃星夏", "桃李", "宵宮玲", "リル", "星明", "メィティア", "古孤ともり", "祇園星明", "火宮星羅", "霊珠院日依", "八生", "つむる", "星詠夜乃", "くぐい"]
     };
 
-    // ガチャの通算回数
     let drawCount = 0;
 
+    // 初期化：<details>タグを使って開閉式リストを作成
+    function initCharacterSettings() {
+      const container = document.getElementById('character-settings');
+      container.innerHTML = '';
+
+      for (const year in characterData) {
+        // 折りたたみコンテナ (<details>)
+        const details = document.createElement('details');
+        details.className = 'year-accordion';
+        details.open = false; // デフォルトで閉じた状態
+
+        // タイトル部分 (<summary>) ：三角マークが自動表示される
+        const summary = document.createElement('summary');
+        summary.className = 'year-summary';
+        summary.innerHTML = `
+          <span>${year}年</span>
+          <button class="btn-toggle-all" onclick="event.stopPropagation(); setCategoryCheckboxes('${year}', true);">この年を選択</button>
+        `;
+        details.appendChild(summary);
+
+        // キャラクター一覧のグリッド
+        const grid = document.createElement('div');
+        grid.className = 'char-grid';
+
+        characterData[year].forEach(charName => {
+          const label = document.createElement('label');
+          label.className = 'char-card';
+          label.innerHTML = `
+            <input type="checkbox" class="char-checkbox" data-year="${year}" value="${charName}" checked>
+            <span>${charName}</span>
+          `;
+          grid.appendChild(label);
+        });
+
+        details.appendChild(grid);
+        container.appendChild(details);
+      }
+    }
+
+    // ガチャ実行
     function drawGacha() {
-      // チェックされているカテゴリーを取得
-      const checkedBoxes = document.querySelectorAll('.category-card input[type="checkbox"]:checked');
-      const selectedCategories = Array.from(checkedBoxes).map(cb => cb.value);
+      const checkedBoxes = document.querySelectorAll('.char-checkbox:checked');
+      const candidatePool = Array.from(checkedBoxes).map(cb => cb.value);
 
       const resultElement = document.getElementById('result');
 
-      // ひとつも選択されていない場合
-      if (selectedCategories.length === 0) {
-        resultElement.innerText = "カテゴリーを選択してください";
+      if (candidatePool.length === 0) {
+        resultElement.innerText = "キャラクターを選択してください";
         return;
       }
 
-      // 選択されたカテゴリーの中身をひとつの配列に統合
-      let candidatePool = [];
-      selectedCategories.forEach(cat => {
-        if (characterData[cat]) {
-          candidatePool = candidatePool.concat(characterData[cat]);
-        }
-      });
-
-      // ランダム抽出
       const randomIndex = Math.floor(Math.random() * candidatePool.length);
       const selectedCharacter = candidatePool[randomIndex];
 
-      // 結果画面に表示
       resultElement.innerText = selectedCharacter;
-
-      // ログの追加処理
       addHistory(selectedCharacter);
     }
 
-    // 履歴を追加する関数
+    // 全選択・全解除機能
+    function setAllCheckboxes(state) {
+      const checkboxes = document.querySelectorAll('.char-checkbox');
+      checkboxes.forEach(cb => cb.checked = state);
+    }
+
+    // 特定の年だけ選択機能
+    function setCategoryCheckboxes(year, state) {
+      const checkboxes = document.querySelectorAll(`.char-checkbox[data-year="${year}"]`);
+      checkboxes.forEach(cb => cb.checked = state);
+    }
+
+    // 履歴追加
     function addHistory(characterName) {
       drawCount++;
-
       const historyList = document.getElementById('history-list');
       const emptyMsg = document.getElementById('empty-msg');
 
-      // 「まだガチャを回していません」のメッセージを削除
       if (emptyMsg) {
         emptyMsg.remove();
       }
 
-      // 新しいリスト項目を作成
       const li = document.createElement('li');
       li.className = 'history-item';
       li.innerHTML = `
@@ -317,16 +390,17 @@
         <span class="history-name">${characterName}</span>
       `;
 
-      // 最新結果をリストの先頭に追加
       historyList.prepend(li);
     }
 
-    // 履歴をクリアする関数
+    // 履歴クリア
     function clearHistory() {
       const historyList = document.getElementById('history-list');
       historyList.innerHTML = '<li class="empty-history" id="empty-msg">まだガチャを回していません</li>';
       drawCount = 0;
     }
+
+    window.onload = initCharacterSettings;
   </script>
 
 </body>
