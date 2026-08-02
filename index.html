@@ -136,13 +136,27 @@
       user-select: none;
       background-color: #fcfcfc;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
       transition: background-color 0.2s;
     }
 
     .year-summary:hover {
       background-color: #f0f7ff;
+    }
+
+    .year-summary label {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+    }
+
+    .year-summary input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
     }
 
     .year-accordion[open] .year-summary {
@@ -303,23 +317,24 @@
 
     let drawCount = 0;
 
-    // 初期化：<details>タグを使って開閉式リストを作成
+    // 初期化：<details>タグと年のチェックボックスを作成
     function initCharacterSettings() {
       const container = document.getElementById('character-settings');
       container.innerHTML = '';
 
       for (const year in characterData) {
-        // 折りたたみコンテナ (<details>)
         const details = document.createElement('details');
         details.className = 'year-accordion';
-        details.open = false; // デフォルトで閉じた状態
+        details.open = false; // デフォルトは閉じた状態
 
-        // タイトル部分 (<summary>) ：三角マークが自動表示される
+        // タイトル部分 (年のチェックボックス付き)
         const summary = document.createElement('summary');
         summary.className = 'year-summary';
         summary.innerHTML = `
-          <span>${year}年</span>
-          <button class="btn-toggle-all" onclick="event.stopPropagation(); setCategoryCheckboxes('${year}', true);">この年を選択</button>
+          <label onclick="event.stopPropagation();">
+            <input type="checkbox" class="year-checkbox" data-year="${year}" checked onchange="toggleYearCheckboxes('${year}', this.checked)">
+            <span>${year}年</span>
+          </label>
         `;
         details.appendChild(summary);
 
@@ -331,7 +346,7 @@
           const label = document.createElement('label');
           label.className = 'char-card';
           label.innerHTML = `
-            <input type="checkbox" class="char-checkbox" data-year="${year}" value="${charName}" checked>
+            <input type="checkbox" class="char-checkbox" data-year="${year}" value="${charName}" checked onchange="updateYearCheckboxState('${year}')">
             <span>${charName}</span>
           `;
           grid.appendChild(label);
@@ -363,14 +378,27 @@
 
     // 全選択・全解除機能
     function setAllCheckboxes(state) {
-      const checkboxes = document.querySelectorAll('.char-checkbox');
-      checkboxes.forEach(cb => cb.checked = state);
+      const charCheckboxes = document.querySelectorAll('.char-checkbox');
+      const yearCheckboxes = document.querySelectorAll('.year-checkbox');
+
+      charCheckboxes.forEach(cb => cb.checked = state);
+      yearCheckboxes.forEach(cb => cb.checked = state);
     }
 
-    // 特定の年だけ選択機能
-    function setCategoryCheckboxes(year, state) {
-      const checkboxes = document.querySelectorAll(`.char-checkbox[data-year="${year}"]`);
-      checkboxes.forEach(cb => cb.checked = state);
+    // 年のチェックボックスを動かした時に配下のキャラを一括切り替え
+    function toggleYearCheckboxes(year, state) {
+      const charCheckboxes = document.querySelectorAll(`.char-checkbox[data-year="${year}"]`);
+      charCheckboxes.forEach(cb => cb.checked = state);
+    }
+
+    // キャラ個別を動かした時に年のチェックボックス状態を自動調整
+    function updateYearCheckboxState(year) {
+      const yearCheckbox = document.querySelector(`.year-checkbox[data-year="${year}"]`);
+      const charCheckboxes = document.querySelectorAll(`.char-checkbox[data-year="${year}"]`);
+      const checkedCharCount = document.querySelectorAll(`.char-checkbox[data-year="${year}"]:checked`).length;
+
+      // 1つでも選択されていれば年のチェックをオン、全て解除されたらオフ
+      yearCheckbox.checked = checkedCharCount > 0;
     }
 
     // 履歴追加
